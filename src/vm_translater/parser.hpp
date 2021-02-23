@@ -19,7 +19,7 @@ std::vector<std::string> split(std::string str, std::string separator = " ") {
             list.emplace_back(str.substr(offset));
             break;
         }
-        list.emplace_back(str.substr(offset, pos));
+        list.emplace_back(str.substr(offset, pos - offset));
         offset = pos + separator_length;
     }
     return list;
@@ -43,6 +43,9 @@ class Parser {
         if (hasMoreCommands()) {
             std::string line;
             std::getline(ifs, line);
+            if (line[line.length() - 1] == '\r') {
+                line = line.substr(0, line.length() - 1);
+            }
             current_commands = split(line);
         }
     }

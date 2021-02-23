@@ -23,21 +23,21 @@ class CodeWriter {
 
     void writeArithmetic(std::string command) {
         ofs << "@SP" << std::endl;
-        ofs << "M=M-1" << std::endl;
+        ofs << "AM=M-1" << std::endl;
         if (command == "neg" || command == "not") {
-            ofs << "A=M" << std::endl;
             if (command == "neg") {
                 ofs << "M=-M" << std::endl;
             } else if (command == "not") {
                 ofs << "M=!M" << std::endl;
             }
+            ofs << "@SP" << std::endl;
+            ofs << "M=M+1" << std::endl;
         } else {
             ofs << "D=M" << std::endl;
-            ofs << "M=M-1" << std::endl;
-            ofs << "A=M" << std::endl;
+            ofs << "A=A-1" << std::endl;
             if (command == "eq" || command == "gt" || command == "lt") {
-                ofs << "D=D-M" << std::endl;
-                ofs << "M=0" << std::endl;
+                ofs << "D=M-D" << std::endl;
+                ofs << "M=-1" << std::endl;  // if true
                 ofs << "@JUMP" << std::to_string(counter) << std::endl;
                 if (command == "eq") {
                     ofs << "D;JEQ" << std::endl;
@@ -47,8 +47,8 @@ class CodeWriter {
                     ofs << "D;JLT" << std::endl;
                 }
                 ofs << "@SP" << std::endl;
-                ofs << "A=M" << std::endl;
-                ofs << "M=-1" << std::endl;
+                ofs << "A=M-1" << std::endl;
+                ofs << "M=0" << std::endl;  // if false
                 ofs << "(JUMP" << std::to_string(counter++) << ")" << std::endl;
             } else {
                 if (command == "add") {
@@ -62,17 +62,17 @@ class CodeWriter {
                 }
             }
         }
-        ofs << "@SP" << std::endl;
-        ofs << "M=M+1" << std::endl;
     }
     void writePushPop(CommandType command_type, std::string segment, int index) {
         switch (command_type) {
             case CommandType::C_PUSH:
+                if (segment == "constant") {
+                    ofs << "@" << std::to_string(index) << std::endl;
+                    ofs << "D=A" << std::endl;
+                }
                 ofs << "@SP" << std::endl;
                 ofs << "A=M" << std::endl;
-                if (segment == "constant") {
-                    ofs << "M=" << std::to_string(index) << std::endl;
-                }
+                ofs << "M=D" << std::endl;
                 ofs << "@SP" << std::endl;
                 ofs << "M=M+1" << std::endl;
                 break;

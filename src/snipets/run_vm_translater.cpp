@@ -16,21 +16,15 @@ int main(int argc, char** argv) {
     std::string filename(argv[1]);
     vm::Parser parser(filename);
 
-    std::string output_filename = filename.substr(0, filename.size() - 3) + ".SAM";
+    std::string output_filename = filename.substr(0, filename.size() - 3) + ".asm";
     vm::CodeWriter writer(output_filename);
 
     while (parser.hasMoreCommands()) {
         parser.advance();
         auto cmd_type = parser.commandType();
-        std::cout << "command type : " << (int)cmd_type << std::endl;
         if (cmd_type == vm::CommandType::C_ARITHMETIC) {
-            std::cout << "Arithmetic operation : " << parser.arg1() << std::endl;
             writer.writeArithmetic(parser.arg1());
         } else if (cmd_type == vm::CommandType::C_POP || cmd_type == vm::CommandType::C_PUSH) {
-            // std::cout << "Push or Pop : " << parser.arg1() << " " << std::endl;
-            // std::cout << parser.arg1() << " " << parser.arg2() << std::endl;
-            std::cout << parser.arg1() << std::endl;
-            std::cout << parser.arg2() << std::endl;
             writer.writePushPop(cmd_type, parser.arg1(), parser.arg2());
         }
     }

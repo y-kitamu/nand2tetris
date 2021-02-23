@@ -13,9 +13,18 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(LIBRARIES "" CACHE INTERNAL "")
 
+# Add external lib's
+add_subdirectory(ext/googletest/)
+set(LIBRARIES ${LIBRARIES} gtest CACHE INTERNAL "")
+
+# find extra packages
+find_package(Boost REQUIRED COMPONENTS filesystem)
+set(LIBRARIES ${LIBRARIES} Boost::filesystem CACHE INTERNAL "")
+
+# Add source
 set(include_dir "${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${include_dir}")
 add_subdirectory(src)
 
-get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-message("INCLUDE DIRS : ${dirs}")
+# Add test
+add_subdirectory(tests)
