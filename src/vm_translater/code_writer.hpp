@@ -64,11 +64,41 @@ class CodeWriter {
         }
     }
     void writePushPop(CommandType command_type, std::string segment, int index) {
+        auto push_template = [this](std::string symbol, int index) {
+            ofs << "@" + symbol << std::endl;
+            ofs << "A=M" << std::endl;
+            ofs << "D=M" << std::endl;
+            ofs << "@" + std::to_string(index) << std::endl;
+            ofs << "A=D+A" << std::endl;
+            ofs << "D=M" << std::endl;
+        };
+        auto pop_template = [this](std::string symbol, int index) {
+            ofs << "@" + symbol << std::endl;
+            ofs << "D=M" << std::endl;
+            ofs << "@" + std::to_string(index) << std::endl;
+            ofs << "D=D+A" << std::endl;
+            ofs << "@SP" << std::endl;
+            ofs << "A=M" << std::endl;
+            ofs << "M=D" << std::endl;
+            ofs << "A=A-1" << std::endl;
+            ofs << "D=M" << std::endl;
+            ofs << "A=A+1" << std::endl;
+            ofs << "A=M" << std::endl;
+            ofs << "M=D" << std::endl;
+        };
         switch (command_type) {
             case CommandType::C_PUSH:
                 if (segment == "constant") {
                     ofs << "@" << std::to_string(index) << std::endl;
                     ofs << "D=A" << std::endl;
+                } else if (segment == "local") {
+                    push_template("LCL", index);
+                } else if (segment == "argument") {
+                    push_template("ARG", index);
+                } else if (segment == "this") {
+                    push_template("THIS", index);
+                } else if (segment == "that") {
+                    push_template("THAT", index);
                 }
                 ofs << "@SP" << std::endl;
                 ofs << "A=M" << std::endl;
@@ -77,6 +107,17 @@ class CodeWriter {
                 ofs << "M=M+1" << std::endl;
                 break;
             case CommandType::C_POP:
+                if (segment == "local") {
+                    pop_template("LCL", index);
+                } else if (segment == "argument") {
+                    pop_template("ARG", index);
+                } else if (segment == "this") {
+                    pop_template("THIS", index);
+                } else if (segment == "that") {
+                    pop_template("THAT", index);
+                }
+                ofs << "@SP" << std::endl;
+                ofs << "M=M-1" << std::endl;
                 break;
             default:
                 std::cout << "function `writePushPop` is called with invalid command." << std::endl;
