@@ -1,18 +1,21 @@
 #ifndef CODE_WRITER_HPP
 #define CODE_WRITER_HPP
 
+#include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>
 
 #include "command_type.hpp"
 
+namespace fs = boost::filesystem;
+
 
 namespace vm {
 
 class CodeWriter {
   public:
-    CodeWriter(std::string filename) {
+    CodeWriter(std::string filename) : filename(filename) {
         ofs = std::ofstream(filename);
         if (!ofs.is_open()) {
             std::cout << "Failed to open file : " << filename << std::endl;
@@ -63,10 +66,17 @@ class CodeWriter {
             }
         }
     }
+
+    std::string getBasename() {
+        std::string basename = fs::basename(filename);
+        basename = basename.substr(0, basename.length() - 3);
+        return basename;
+    }
+
+
     void writePushPop(CommandType command_type, std::string segment, int index) {
         auto push_template = [this](std::string symbol, int index) {
             ofs << "@" + symbol << std::endl;
-            ofs << "A=M" << std::endl;
             ofs << "D=M" << std::endl;
             ofs << "@" + std::to_string(index) << std::endl;
             ofs << "A=D+A" << std::endl;
@@ -99,6 +109,15 @@ class CodeWriter {
                     push_template("THIS", index);
                 } else if (segment == "that") {
                     push_template("THAT", index);
+                } else if (segment == "temp") {
+                    ofs << "@R" << std::to_string(5 + index) << std::endl;
+                    ofs << "D=M" << std::endl;
+                } else if (segment == "pointer") {
+                    ofs << "@R" << std::to_string(3 + index) << std::endl;
+                    ofs << "D=M" << std::endl;
+                } else if (segment == "static") {
+                    ofs << "@" << getBasename() << "." << std::to_string(index) << std::endl;
+                    ofs << "D=M" << std::endl;
                 }
                 ofs << "@SP" << std::endl;
                 ofs << "A=M" << std::endl;
@@ -115,6 +134,24 @@ class CodeWriter {
                     pop_template("THIS", index);
                 } else if (segment == "that") {
                     pop_template("THAT", index);
+                } else if (segment == "temp") {
+                    ofs << "@SP" << std::endl;
+                    ofs << "A=M-1" << std::endl;
+                    ofs << "D=M" << std::endl;
+                    ofs << "@R" << std::to_string(5 + index) << std::endl;
+                    ofs << "M=D" << std::endl;
+                } else if (segment == "pointer") {
+                    ofs << "@SP" << std::endl;
+                    ofs << "A=M-1" << std::endl;
+                    ofs << "D=M" << std::endl;
+                    ofs << "@R" << std::to_string(3 + index) << std::endl;
+                    ofs << "M=D" << std::endl;
+                } else if (segment == "static") {
+                    ofs << "@SP" << std::endl;
+                    ofs << "A=M-1" << std::endl;
+                    ofs << "D=M" << std::endl;
+                    ofs << "@" << getBasename() << "." << std::to_string(index) << std::endl;
+                    ofs << "M=D" << std::endl;
                 }
                 ofs << "@SP" << std::endl;
                 ofs << "M=M-1" << std::endl;
