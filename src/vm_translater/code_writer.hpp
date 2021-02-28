@@ -24,6 +24,14 @@ class CodeWriter {
 
     void setFileName(std::string filename) { this->filename = filename; }
 
+    void bootstrap() {
+        ofs << "@256" << std::endl;
+        ofs << "D=A" << std::endl;
+        ofs << "@SP" << std::endl;
+        ofs << "M=D" << std::endl;
+        writeCall("Sys.init", 0);
+    }
+
     void writeArithmetic(std::string command) {
         ofs << "@SP" << std::endl;
         ofs << "AM=M-1" << std::endl;
@@ -68,8 +76,7 @@ class CodeWriter {
     }
 
     std::string getBasename() {
-        std::string basename = fs::basename(filename);
-        basename = basename.substr(0, basename.length() - 3);
+        std::string basename = fs::path(filename).stem().generic_string();
         return basename;
     }
 
@@ -160,6 +167,122 @@ class CodeWriter {
                 std::cout << "function `writePushPop` is called with invalid command." << std::endl;
         }
     }
+
+    void writeLabel(std::string label) { ofs << "(" << label << ")" << std::endl; }
+
+    void writeGoto(std::string label) {
+        ofs << "@" << label << std::endl;
+        ofs << "0;JMP" << std::endl;
+    }
+
+    void writeIf(std::string label) {
+        ofs << "@SP" << std::endl;
+        ofs << "M=M-1" << std::endl;
+        ofs << "A=M" << std::endl;
+        ofs << "D=M" << std::endl;
+        ofs << "@" << label << std::endl;
+        ofs << "D;JNE" << std::endl;
+    }
+
+    void writeCall(std::string functionName, int numArgs) {
+        auto push_label = [this](std::string label, bool is_a = false) {
+            this->ofs << "@" << label << std::endl;
+            if (is_a) {
+                this->ofs << "D=A" << std::endl;
+            } else {
+                this->ofs << "D=M" << std::endl;
+            }
+            this->ofs << "@SP" << std::endl;
+            this->ofs << "A=M" << std::endl;
+            this->ofs << "M=D" << std::endl;
+            this->ofs << "@SP" << std::endl;
+            this->ofs << "M=M+1" << std::endl;
+        };
+
+        auto set_pointer = [this](std::string label, int offset) {
+            this->ofs << "@" << std::to_string(offset) << std::endl;
+            this->ofs << "D=A" << std::endl;
+            this->ofs << "@SP" << std::endl;
+            this->ofs << "D=M-D" << std::endl;
+            this->ofs << "@" << label << std::endl;
+            this->ofs << "M=D" << std::endl;
+        };
+
+        std::string return_addr_label = functionName + "$return" + std::to_string(counter++);
+        push_label(return_addr_label, true);
+        push_label("LCL");
+        push_label("ARG");
+        push_label("THIS");
+        push_label("THAT");
+
+        set_pointer("ARG", numArgs + 5);
+        set_pointer("LCL", 0);
+
+        ofs << "@" << functionName << std::endl;
+        ofs << "0;JMP" << std::endl;
+        writeLabel(return_addr_label);
+    }
+
+    void writeReturn() {
+        // get return value to R13
+        ofs << "@SP" << std::endl;
+        ofs << "A=M-1" << std::endl;
+        ofs << "D=M" << std::endl;
+        ofs << "@R13" << std::endl;
+        ofs << "M=D" << std::endl;
+
+        // get return address to R14
+        ofs << "@LCL" << std::endl;
+        ofs << "D=M" << std::endl;
+        ofs << "@5" << std::endl;
+        ofs << "A=D-A" << std::endl;
+        ofs << "D=M" << std::endl;
+        ofs << "@R14" << std::endl;
+        ofs << "M=D" << std::endl;
+
+        // set SP to correct position
+        ofs << "@ARG" << std::endl;
+        ofs << "D=M+1" << std::endl;
+        ofs << "@SP" << std::endl;
+        ofs << "M=D" << std::endl;
+
+        auto set_pointer = [this](std::string label, std::string base_label, int offset) {
+            this->ofs << "@" << base_label << std::endl;
+            this->ofs << "D=M" << std::endl;
+            this->ofs << "@" << std::to_string(std::abs(offset)) << std::endl;
+            this->ofs << "A=D-A" << std::endl;
+            this->ofs << "D=M" << std::endl;
+            this->ofs << "@" << label << std::endl;
+            this->ofs << "M=D" << std::endl;
+        };
+
+        set_pointer("THAT", "LCL", 1);
+        set_pointer("THIS", "LCL", 2);
+        set_pointer("ARG", "LCL", 3);
+        set_pointer("LCL", "LCL", 4);
+
+        // set return value to top of stack
+        ofs << "@R13" << std::endl;
+        ofs << "D=M" << std::endl;
+        ofs << "@SP" << std::endl;
+        ofs << "A=M-1" << std::endl;
+        ofs << "M=D" << std::endl;
+
+        // set return address to A
+        ofs << "@R14" << std::endl;
+        ofs << "A=M" << std::endl;
+
+        // jump to return address
+        ofs << "0;JMP" << std::endl;
+    }
+
+    void writeFunction(std::string functionName, int numLocals) {
+        writeLabel(functionName);
+        for (int i = 0; i < numLocals; i++) {
+            writePushPop(CommandType::C_PUSH, "local", i);
+        }
+    }
+
     void close() { ofs.close(); }
 
   private:

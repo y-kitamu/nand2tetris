@@ -84,11 +84,12 @@ class Parser {
     }
 
     std::string arg1() {
-        if (commandType() == CommandType::C_RETURN) {
-            return "";
-        }
-        if (commandType() == CommandType::C_ARITHMETIC) {
-            return current_commands[0];
+        auto cmd_type = commandType();
+        switch (cmd_type) {
+            case CommandType::C_RETURN:
+                return "";
+            case CommandType::C_ARITHMETIC:
+                return current_commands[0];
         }
         return current_commands[1];
     }
